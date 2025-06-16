@@ -65,13 +65,25 @@ LICAG3D is trained on a multicenter Chinese CAG dataset:
 ### 1. Train X-ray EG3D
 
 ```bash
-python train.py --data=./data/cag.zip --outdir=./runs --gpus=2 --cfg=eg3d_cag
+python DSAGAN/eg3d/train.py --outdir=OUTDIR --cfg=dsanet --data=CAGDATASET --gpus=2 --batch=2 --neural_rendering_resolution_initial=128 --gamma=5 --aug=ada --neural_rendering_resolution_final=128 --gen_pose_cond=True --gpc_reg_prob=0.8 --snap=1 --metrics=none
 ```
 
-### 2. Train pSp Encoder with Tuple Loss
+### 2. Generate images, videos, and 3D models
 
 ```bash
-python train_encoder.py --data=./data/cag_train --outdir=./encoder --tuple
+python DSAGAN/scripts/gen_videos.py --outdir=RESULT_PATH --trunc=0.7 --seeds=134 --grid=2x2 --network=EG3D_MODEL_PATH --num-keyframes=2 --v_num=3 --v_range=32
+```
+
+### 3. Train pSp Encoder with Tuple Loss
+
+```bash
+python DSAGAN/scripts/train_psp.py --exp_dir=RESULT_PATH --device=cuda:0 --n_styles=14 --batch_size=1 --test_batch_size=1 --workers=8 --test_workers=8 --val_interval=2500 --save_interval=5000 --checkpoint_path=COUNTINE_TRAIN_MODEL_PATH
+```
+
+#### Encoder inference
+
+```bash
+python scripts/inference_psp.py --exp_dir=RESULT_PATH --checkpoint_path=ENCODER_MODEL_PATH --data_path=DATA_PATH --test_batch_size=1 --test_workers=4
 ```
 
 ### 3. GAN Inversion (Multi-stage Optimization)
@@ -80,7 +92,7 @@ python train_encoder.py --data=./data/cag_train --outdir=./encoder --tuple
 python invert.py --target_img=img1.png --ref_img=img2.png --ctc=True
 ```
 
-### 4. Clinical Evaluation (optional)
+### 4. Clinical Evaluation
 
 Compare 3D outputs with CTA annotations using:
 
@@ -116,14 +128,23 @@ Compare 3D outputs with CTA annotations using:
 
 ```
 LICAG3D/
-├── data/                       # Preprocessed dataset  
-├── models/                     # Trained models  
-├── eg3d/                       # Adapted EG3D training  
-├── inversion/                  # pSp encoder + optimization  
-├── preprocessing/              # Keyframe, crop, camera utils  
-├── style_unify/                # CycleGAN style transfer  
-├── evaluation/                 # Clinical metrics, SSIM  
-├── scripts/                    # Execution scripts  
-└── README.md  
+├── DSAGAN/                    # Main GAN-based reconstruction code
+│   ├── configs/              # Model configs and conversion scripts
+│   ├── criteria/             # Loss functions
+│   ├── dataset_preprocessing/ # Data preprocessing scripts
+│   ├── datasets/             # Dataset loader modules
+│   ├── dnnlib/               # Deep learning utilities
+│   ├── latentcode/           # Latent code manipulation
+│   ├── metrics/              # Evaluation metrics (e.g., SSIM)
+│   ├── models/               # Network architectures
+│   ├── options/              # Runtime argument parsing
+│   ├── pytorch_ssim/         # SSIM metric implementation
+│   ├── scripts/              # Entry point scripts (e.g., test.py)
+│   ├── torch_utils/          # Torch-level tools
+│   ├── training/             # Training pipeline
+│   ├── utils/                # General utility functions
+│   └── viz/                  # Visualization tools
+├── LICENSE                   # License file
+└── README.md                 # Project description
 ```
 
